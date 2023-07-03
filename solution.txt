@@ -1,0 +1,132 @@
+Lab | Cleaning numerical data
+
+Instructions
+1-Import the necessary libraries.
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
+2-Load the customer_value_analysis.csv into the variable customer_df.
+
+customer_df = pd.read_csv('we_fn_use_c_marketing_customer_value_analysis.csv')
+
+
+3-First look at its main features (head, shape, info).
+
+display(customer_df.shape)
+customer_df.head()
+customer_df.info
+
+4-Rename the columns so they follow the PE8 (snake case: lowecase_with_underscores).
+
+customer_df.columns = customer_df.columns.str.lower().str.replace(' ', '_')
+
+# Print the DataFrame with renamed columns
+print(customer_df.columns)
+
+5-Change the type of effective_to_date column to DateTime format.
+
+customer_df['effective_to_date'] = pd.to_datetime(customer_df['effective_to_date'])
+
+6-Check NaN values per column.
+
+customer_df.isnull()
+
+7-Define a function that given an input dataframe, returns two dataframes: one with numerical columns and another with categorical columns of the input dataframe.
+
+def separate_columns(dataframe):
+    numerical_columns = dataframe.select_dtypes(include=[np.number])
+    categorical_columns = dataframe.select_dtypes(include=['object', 'category'])
+    return numerical_columns, categorical_columns
+
+numerical_df, categorical_df = separate_columns(customer_df)
+
+numerical_df
+
+8-Drop any ID column.
+
+9-Get the correlation matrix for the numerical variables. What is the pair of numerical variables that have the highest correlation? It makes sense, why?
+
+correlation_matrix = numerical_df.corr()
+
+highest_correlation = correlation_matrix.max().max()
+variable_pair = correlation_matrix.stack().idxmax()
+
+10-Define a function that takes a pandas DataFrame as an input and returns two pandas DataFrames: the first containing numerical continuous columns and the second containing numerical discrete columns of the input dataframe. To this end, it might be helpful to count the number of unique values. The function must have an optional argument set by default to 36 to discriminate between continuous and discrete columns. Then, use it to create two new dataframes: continuous_df and discrete_df.
+
+def separate_continuous_discrete(df, unique_threshold=36):
+    continuous_cols = []
+    discrete_cols = []
+
+    for col in df.columns:
+        if pd.api.types.is_numeric_dtype(df[col]):
+            unique_values = df[col].nunique()
+            if unique_values <= unique_threshold:
+                discrete_cols.append(col)
+            else:
+                continuous_cols.append(col)
+
+    continuous_df = df[continuous_cols]
+    discrete_df = df[discrete_cols]
+
+    return continuous_df, discrete_df
+
+continuous_df, discrete_df = separate_continuous_discrete(customer_df, unique_threshold=50)
+
+11-Create a function to create a barplot for all the columns of the discrete_df using seaborn, and set the figuresize = (16,16).
+
+def create_barplot(discrete_df):
+    num_cols = len(discrete_df.columns)
+    fig, axes = plt.subplots(num_cols, 1, figsize=(16, 16))
+
+    for i, column in enumerate(discrete_df.columns):
+        ax = axes[i]
+        sns.countplot(x=column, data=discrete_df, ax=ax)
+        ax.set_xlabel(column)
+        ax.set_ylabel('Count')
+        ax.set_title(f'Bar Plot of {column}')
+
+    plt.tight_layout()
+    plt.show()
+
+12-Create a function to create a histogram for all the columns of the continuous_df using seaborn, and set the figuresize = (16,16)
+
+def create_histograms(continuous_df):
+    plt.figure(figsize=(16, 16))
+    num_cols = continuous_df.select_dtypes(include=['float', 'int']).columns
+    num_cols_count = len(num_cols)
+    plot_rows = int(num_cols_count / 2) + (num_cols_count % 2 > 0)
+
+    for i, col in enumerate(num_cols):
+        plt.subplot(plot_rows, 2, i+1)
+        sns.histplot(data=continuous_df, x=col, kde=True)
+        plt.xlabel(col)
+        plt.ylabel('Count')
+
+    plt.tight_layout()
+    plt.show()
+
+13-According to the previous histogram plots, do you think that you will have to apply any transformation? No.
+
+14-Look for outliers in the continuous variables that you have found. Hint: There was a good plot to do that. Define a function to create this kind of plot for the continuous_df.
+
+plt.figure(figsize=(12, 6))
+sns.boxplot(data=continuous_df)
+plt.title("Box Plot of Continuous Data")
+plt.show()
+------
+def plot_outliers(dataframe):
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    dataframe.boxplot(ax=ax)
+
+    ax.set_title('Box Plot of Continuous Variables')
+    ax.set_ylabel('Value')
+
+    plt.xticks(rotation=45)
+
+    plt.show()
+-----
+plot_outliers(continuous_df)
